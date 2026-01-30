@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyber-Physical SOC</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-safe: #10b981;
+            --accent-danger: #ef4444;
+            --accent-warn: #f59e0b;
+            --neon-blue: #3b82f6;
+            --toggle-off: #475569;
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-primary); margin: 0; padding: 15px; }
+
+        /* HEADER */
+        .header { text-align: center; margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 15px; position: relative; }
+        .connection-status { position: absolute; top: 5px; right: 0; font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; background: rgba(15, 23, 42, 0.6); padding: 5px 10px; border-radius: 20px; border: 1px solid #334155; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--text-secondary); }
+        .status-online { background-color: var(--accent-safe); box-shadow: 0 0 8px var(--accent-safe); animation: pulse-green 2s infinite; }
+        .status-offline { background-color: var(--accent-danger); }
+        @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        h1 { font-family: 'Roboto Mono', monospace; font-size: 1.6rem; margin: 0; letter-spacing: -1px; line-height: 1.2; }
+        .subtitle { color: var(--text-secondary); font-size: 0.8rem; margin-top: 5px; }
+
+        /* ALERT BANNER */
+        #alert-box { padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: 700; text-align: center; font-family: 'Roboto Mono', monospace; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 0.5px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; }
+        .safe-state { background-color: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-safe); color: var(--accent-safe); }
+        .danger-state { background-color: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-danger); color: var(--accent-danger); animation: pulse 1.5s infinite; }
+
+        /* GRID LAYOUT */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; max-width: 1400px; margin: 0 auto; }
+        .card { background-color: var(--card-bg); border-radius: 12px; padding: 20px; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; }
+        .card-header { display: flex; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .card-header i { font-size: 1.3rem; margin-right: 12px; }
+        .card-title { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); }
+
+        /* METRICS BOXES */
+        .metrics-row { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
+        .metric-item { text-align: center; background: #0f172a; padding: 15px 5px; border-radius: 8px; flex: 1; }
+        .metric-label { display: block; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .metric-value { font-family: 'Roboto Mono', monospace; font-size: 1.2rem; font-weight: 700; }
+
+        /* AI BOX */
+        .ai-box { background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 3px solid var(--neon-blue); font-size: 0.85rem; line-height: 1.4; display: flex; align-items: center; }
+        .chart-container { position: relative; width: 100%; flex-grow: 1; min-height: 200px; }
+
+        /* --- CONTROL SWITCHES --- */
+        .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; background: #0f172a; padding: 12px; border-radius: 8px; }
+        .control-label { font-size: 0.9rem; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+        .status-badge { font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; background: var(--toggle-off); color: #cbd5e1; transition: 0.3s; }
+        .active-red { background: var(--accent-danger); color: white; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+        .active-green { background: var(--accent-safe); color: white; }
+
+        /* DESKTOP OVERRIDES */
+        @media (min-width: 768px) {
+            body { padding: 30px; }
+            h1 { font-size: 2.5rem; }
+            .connection-status { top: 10px; font-size: 0.9rem; padding: 8px 15px; }
+            .card { padding: 25px; }
+            .card-title { font-size: 1.3rem; }
+            .metric-value { font-size: 1.6rem; }
+            .chart-container { min-height: 260px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+       <h1><i class="fa-solid fa-shield-halved" style="color: var(--neon-blue);"></i> Cyber-Physical SOC</h1>
+       <div class="subtitle">Integrated IT/OT Security Operations Center</div>
+        
+        <div class="connection-status">
+            <span id="conn-text">CONNECTING</span>
+            <div id="conn-dot" class="status-dot"></div>
+        </div>
+
+        <button onclick="window.location.href='/api/report'" style="
+            margin-top: 15px; background: var(--card-bg); color: var(--text-secondary); border: 1px solid #334155; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.85rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+        " onmouseover="this.style.borderColor='var(--neon-blue)'; this.style.color='var(--text-primary)'" 
+           onmouseout="this.style.borderColor='#334155'; this.style.color='var(--text-secondary)'">
+            <i class="fa-solid fa-file-pdf"></i> Download Security Audit
+        </button>
+    </div>
+
+    <div class="container">
+        <div id="alert-box" class="safe-state">
+            <i class="fa-solid fa-check-circle"></i> SYSTEM STATUS: SECURE
+        </div>
+
+        <div class="dashboard-grid">
+            
+            <div class="card" style="border-top: 4px solid var(--accent-warn);">
+                <div class="card-header">
+                    <i class="fa-solid fa-temperature-high" style="color: var(--accent-warn);"></i>
+                    <span class="card-title">Environment</span>
+                </div>
+                <div class="metrics-row">
+                    <div class="metric-item"><span class="metric-label">TEMP</span><span class="metric-value" style="color: var(--accent-warn);"><span id="temp">--</span>°C</span></div>
+                    <div class="metric-item"><span class="metric-label">GAS</span><span class="metric-value" id="gas">--</span></div>
+                    <div class="metric-item"><span class="metric-label">MOTION</span><span class="metric-value" id="motion">--</span></div>
+                </div>
+                <div class="ai-box">
+                    <span style="color: var(--text-secondary); margin-right: 8px;"><i class="fa-solid fa-robot"></i> AI PRED:</span>
+                    <span id="ml-pred" style="font-weight: bold; color: var(--text-primary);">Initializing...</span>
+                </div>
+                <div class="chart-container"><canvas id="tempChart"></canvas></div>
+            </div>
+
+            <div class="card" style="border-top: 4px solid var(--neon-blue);">
+                <div class="card-header">
+                    <i class="fa-solid fa-network-wired" style="color: var(--neon-blue);"></i>
+                    <span class="card-title">Network</span>
+                </div>
+                <div class="metrics-row">
+                    <div class="metric-item"><span class="metric-label">CPU</span><span class="metric-value" style="color: var(--neon-blue);"><span id="cpu">--</span>%</span></div>
+                    <div class="metric-item"><span class="metric-label">RAM</span><span class="metric-value" id="ram">--</span>%</div>
+                    <div class="metric-item"><span class="metric-label">THREAT</span><span class="metric-value" id="threat">LOW</span></div>
+                </div>
+                <div class="chart-container"><canvas id="cpuChart"></canvas></div>
+            </div>
+
+            <div class="card" style="border-top: 4px solid var(--accent-danger);">
+                <div class="card-header">
+                    <i class="fa-solid fa-tower-broadcast" style="color: var(--accent-danger);"></i>
+                    <span class="card-title">Active Countermeasures</span>
+                </div>
+                
+                <div class="control-row">
+                    <div class="control-label"><i class="fa-solid fa-faucet-drip"></i> Sprinkler System</div>
+                    <span id="stat-sprinkler" class="status-badge">STANDBY</span>
+                </div>
+
+                <div class="control-row">
+                    <div class="control-label"><i class="fa-solid fa-bell"></i> Emergency Alarm</div>
+                    <span id="stat-alarm" class="status-badge">SILENT</span>
+                </div>
+
+                <div class="control-row">
+                    <div class="control-label"><i class="fa-solid fa-door-open"></i> Door Locks</div>
+                    <span id="stat-door" class="status-badge active-green">LOCKED</span>
+                </div>
+
+                <div class="control-row" style="margin-bottom: 0;">
+                    <div class="control-label"><i class="fa-solid fa-shield-virus"></i> Firewall Rules</div>
+                    <span id="stat-firewall" class="status-badge active-green">STANDARD</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        Chart.defaults.color = '#94a3b8'; Chart.defaults.borderColor = '#334155'; Chart.defaults.font.family = "'Roboto Mono', monospace";
+        const ctxTemp = document.getElementById('tempChart').getContext('2d');
+        const ctxCpu = document.getElementById('cpuChart').getContext('2d');
+        const gradientTemp = ctxTemp.createLinearGradient(0, 0, 0, 400); gradientTemp.addColorStop(0, 'rgba(245, 158, 11, 0.5)'); gradientTemp.addColorStop(1, 'rgba(245, 158, 11, 0)');
+        const gradientCpu = ctxCpu.createLinearGradient(0, 0, 0, 400); gradientCpu.addColorStop(0, 'rgba(59, 130, 246, 0.5)'); gradientCpu.addColorStop(1, 'rgba(59, 130, 246, 0)');
+        const commonOptions = { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { font: { size: 10 } } }, x: { grid: { display: false }, ticks: { display: false } } }, plugins: { legend: { display: false } } };
+        const tempChart = new Chart(ctxTemp, { type: 'line', data: { labels: [], datasets: [{ label: 'Temp', borderColor: '#f59e0b', backgroundColor: gradientTemp, borderWidth: 2, fill: true, tension: 0.4, data: [] }] }, options: { ...commonOptions, scales: { y: { beginAtZero: false, grid: { color: '#334155' } }, x: { display: false } } } });
+        const cpuChart = new Chart(ctxCpu, { type: 'line', data: { labels: [], datasets: [{ label: 'CPU', borderColor: '#3b82f6', backgroundColor: gradientCpu, borderWidth: 2, fill: true, tension: 0.4, data: [] }] }, options: { ...commonOptions, scales: { y: { beginAtZero: true, max: 100 }, x: { display: false } } } });
+
+        async function fetchData() {
+            try {
+                const response = await fetch('/api/monitor');
+                if (!response.ok) throw new Error("Server Error");
+                const data = await response.json();
+
+                document.getElementById('conn-text').innerText = "LIVE DATA"; document.getElementById('conn-dot').className = "status-dot status-online";
+                document.getElementById('temp').innerText = data.iot_metrics.temperature;
+                document.getElementById('gas').innerText = data.iot_metrics.gas_level;
+                
+                const mot = document.getElementById('motion');
+                if(data.iot_metrics.motion == 1) { mot.innerHTML = "<span style='color:#ef4444'>DETECTED</span>"; } else { mot.innerHTML = "<span style='color:#10b981'>NONE</span>"; }
+
+                document.getElementById('cpu').innerText = data.security_metrics.cpu_usage;
+                document.getElementById('ram').innerText = data.security_metrics.ram_usage;
+                document.getElementById('threat').innerText = data.security_metrics.alert_status.includes("SAFE") ? "LOW" : "HIGH";
+                document.getElementById('ml-pred').innerText = data.security_metrics.ml_prediction;
+
+                // --- UPDATE ACTIVE DEFENSE PANEL ---
+                const controls = data.system_controls;
+                
+                // Sprinklers
+                const spk = document.getElementById('stat-sprinkler');
+                if (controls.sprinklers) { spk.innerText = "ACTIVE"; spk.className = "status-badge active-green"; }
+                else { spk.innerText = "STANDBY"; spk.className = "status-badge"; }
+
+                // Alarm
+                const alm = document.getElementById('stat-alarm');
+                if (controls.alarm) { alm.innerText = "RINGING"; alm.className = "status-badge active-red"; }
+                else { alm.innerText = "SILENT"; alm.className = "status-badge"; }
+
+                // Door Locks
+                const door = document.getElementById('stat-door');
+                if (!controls.door_lock) { door.innerText = "UNLOCKED"; door.className = "status-badge active-red"; } // Red because unlocked is danger/evacuation
+                else { door.innerText = "LOCKED"; door.className = "status-badge active-green"; }
+
+                // Firewall
+                const fw = document.getElementById('stat-firewall');
+                if (controls.firewall.includes("BLOCKING")) { fw.innerText = "LOCKDOWN"; fw.className = "status-badge active-red"; }
+                else { fw.innerText = "STANDARD"; fw.className = "status-badge active-green"; }
+
+                // Update Graphs
+                const timeNow = new Date().toLocaleTimeString();
+                if(tempChart.data.labels.length > 20) tempChart.data.labels.shift(); tempChart.data.labels.push(timeNow);
+                if(tempChart.data.datasets[0].data.length > 20) tempChart.data.datasets[0].data.shift(); tempChart.data.datasets[0].data.push(data.iot_metrics.temperature); tempChart.update();
+                if(cpuChart.data.labels.length > 20) cpuChart.data.labels.shift(); cpuChart.data.labels.push(timeNow);
+                if(cpuChart.data.datasets[0].data.length > 20) cpuChart.data.datasets[0].data.shift(); cpuChart.data.datasets[0].data.push(data.security_metrics.cpu_usage); cpuChart.update();
+
+                // Alert Logic
+                const alertBox = document.getElementById('alert-box'); const rawStatus = data.security_metrics.alert_status;
+                if (rawStatus.includes("SAFE")) { alertBox.className = "safe-state"; alertBox.innerHTML = '<i class="fa-solid fa-check-circle"></i> SYSTEM STATUS: SECURE'; }
+                else { alertBox.className = "danger-state"; let icon = '<i class="fa-solid fa-triangle-exclamation"></i>'; if(rawStatus.includes("FIRE")) icon = '<i class="fa-solid fa-fire"></i>'; if(rawStatus.includes("DDoS")) icon = '<i class="fa-solid fa-shield-virus"></i>'; alertBox.innerHTML = `${icon} ${rawStatus}`; }
+
+            } catch (error) { console.error("Error:", error); document.getElementById('conn-text').innerText = "DISCONNECTED"; document.getElementById('conn-dot').className = "status-dot status-offline"; }
+        }
+        setInterval(fetchData, 1000); 
+    </script>
+</body>
+</html>
