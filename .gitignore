@@ -1,0 +1,21 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual Environment
+venv/
+
+# Database files
+*.db
+
+# Logs
+incident_log.csv
+
+# Flask instance folder
+instance/
+
+# Ngrok files
+.ngrok*
+
+# OS junk
+.DS_Store
